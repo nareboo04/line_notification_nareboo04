@@ -33,8 +33,16 @@ def reply(reply_token: str, messages: list[dict]):
         print(f"[reply] error: {e}")
 
 
-def text_msg(content: str) -> dict:
-    return {"type": "text", "text": content}
+def text_msg(content: str, qr: list[tuple[str, str]] | None = None) -> dict:
+    m: dict = {"type": "text", "text": content}
+    if qr:
+        m["quickReply"] = {
+            "items": [
+                {"type": "action", "action": {"type": "message", "label": lbl, "text": txt}}
+                for lbl, txt in qr
+            ]
+        }
+    return m
 
 
 def flex_msg(alt_text: str, bubble: dict) -> dict:

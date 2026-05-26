@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from app import database as db
 from app.line import commands
+from app.line import messaging as msg
 
 app = FastAPI(docs_url="/documentation", redoc_url=None)
 
@@ -37,6 +38,12 @@ async def webhook(request: Request):
     return {"status": "ok"}
 
 
+_WELCOME_QR = [
+    ("💰 ราคาทอง",     "ราคา ทอง"),
+    ("❓ คำสั่งทั้งหมด", "ช่วยเหลือ"),
+]
+
+
 def _register_user(user_id: str):
     try:
         conn = db.get_conn()
@@ -46,6 +53,12 @@ def _register_user(user_id: str):
         cursor.close()
         conn.close()
         print(f"[webhook] follow: {user_id}")
+        msg.push(user_id, [msg.text_msg(
+            "ยินดีต้อนรับ! 🎉\n\n"
+            "บอทนี้แจ้งเตือนราคา ทองคำ / หุ้น / คริปโต ได้เลย\n"
+            "พิมพ์ 'ช่วยเหลือ' เพื่อดูคำสั่งทั้งหมด",
+            _WELCOME_QR,
+        )])
     except Exception as e:
         print(f"[webhook] register error: {e}")
 

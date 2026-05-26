@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-LINE_TOKEN: str = os.getenv('AUTHORIZATION', '')
+LINE_TOKEN: str = os.getenv('LINE_TOKEN', os.getenv('AUTHORIZATION', ''))
 
 DB_CONFIG: dict = {
     'host': os.getenv('MYSQL_HOST', 'localhost'),
