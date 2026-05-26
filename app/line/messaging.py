@@ -91,13 +91,15 @@ def build_gold_bubble(data: GoldPrice) -> dict:
 def build_stock_bubble(data: StockPrice) -> dict:
     change_color = "#2ecc71" if data.change >= 0 else "#e74c3c"
     sign = "+" if data.change >= 0 else ""
+    sym = "$" if data.currency == "USD" else "฿"
+    market_label = "ราคาหุ้น US" if data.market == "US" else "ราคาหุ้น SET"
 
     return {
         "type": "bubble",
         "header": {
             "type": "box", "layout": "vertical", "backgroundColor": "#1a73e8",
             "contents": [
-                {"type": "text", "text": "ราคาหุ้น SET", "color": "#ffffff", "size": "sm"},
+                {"type": "text", "text": market_label, "color": "#ffffff", "size": "sm"},
                 {"type": "text", "text": data.symbol, "color": "#ffffff", "weight": "bold", "size": "xxl"},
                 {"type": "text", "text": data.name, "color": "#ffffffbb", "size": "xs", "wrap": True},
             ],
@@ -106,10 +108,10 @@ def build_stock_bubble(data: StockPrice) -> dict:
             "type": "box", "layout": "vertical", "spacing": "sm",
             "contents": [
                 {
-                    "type": "text", "text": f"{data.price:,.2f} ฿",
+                    "type": "text", "text": f"{sym}{data.price:,.2f}" if sym == "$" else f"{data.price:,.2f} {sym}",
                     "size": "xxl", "weight": "bold", "align": "center", "color": "#1a73e8",
                 },
-                _row("ราคาปิดเมื่อวาน", f"{data.prev_close:,.2f} ฿"),
+                _row("ราคาปิดเมื่อวาน", f"{sym}{data.prev_close:,.2f}" if sym == "$" else f"{data.prev_close:,.2f} {sym}"),
                 _row("เปลี่ยนแปลง",
                      f"{sign}{data.change:,.2f} ({sign}{data.change_pct:.2f}%)", change_color),
             ],
@@ -155,6 +157,10 @@ def build_alert_triggered_bubble(alert: dict, current_price: float) -> dict:
     cond_text = "สูงกว่า" if alert["condition_type"] == "above" else "ต่ำกว่า"
     target = float(alert["target_price"])
 
+    is_usd = alert.get("asset_type") == "stock" and alert.get("asset_market") == "US"
+    sym = "$" if is_usd else "฿"
+    _fmt = lambda v: f"${v:,.2f}" if is_usd else f"{v:,.2f} ฿"
+
     return {
         "type": "bubble",
         "header": {
@@ -168,9 +174,9 @@ def build_alert_triggered_bubble(alert: dict, current_price: float) -> dict:
             "type": "box", "layout": "vertical", "spacing": "sm",
             "contents": [
                 _row("สินทรัพย์", title),
-                _row("เงื่อนไข", f"{cond_text} {target:,.2f} ฿"),
+                _row("เงื่อนไข", f"{cond_text} {_fmt(target)}"),
                 {"type": "separator", "margin": "sm"},
-                _row("ราคาปัจจุบัน", f"{current_price:,.2f} ฿", "#e74c3c"),
+                _row("ราคาปัจจุบัน", _fmt(current_price), "#e74c3c"),
             ],
         },
     }

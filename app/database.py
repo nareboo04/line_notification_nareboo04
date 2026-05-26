@@ -58,6 +58,7 @@ def init_db():
     # Migration: add asset_market column to existing alerts table
     try:
         cursor.execute("SELECT asset_market FROM alerts LIMIT 1")
+        cursor.fetchall()
     except mysql.connector.Error:
         cursor.execute(
             "ALTER TABLE alerts ADD COLUMN asset_market VARCHAR(5) NOT NULL DEFAULT 'TH' AFTER asset_symbol"
