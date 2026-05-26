@@ -45,12 +45,38 @@ def init_db():
             user_id VARCHAR(255) NOT NULL,
             asset_type ENUM('gold','stock','crypto') NOT NULL,
             asset_symbol VARCHAR(20) DEFAULT NULL,
+            asset_market VARCHAR(5) NOT NULL DEFAULT 'TH',
             target_price DECIMAL(20,2) NOT NULL,
             condition_type ENUM('above','below') NOT NULL,
             is_active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_user_active (user_id, is_active),
             INDEX idx_asset_active (asset_type, asset_symbol, is_active)
+        ) CHARACTER SET utf8mb4
+    ''')
+
+    # Migration: add asset_market column to existing alerts table
+    try:
+        cursor.execute("SELECT asset_market FROM alerts LIMIT 1")
+    except mysql.connector.Error:
+        cursor.execute(
+            "ALTER TABLE alerts ADD COLUMN asset_market VARCHAR(5) NOT NULL DEFAULT 'TH' AFTER asset_symbol"
+        )
+        conn.commit()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS scheduled_alerts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id VARCHAR(255) NOT NULL,
+            asset_type ENUM('gold','stock','crypto') NOT NULL,
+            asset_symbol VARCHAR(20) DEFAULT NULL,
+            asset_market VARCHAR(5) NOT NULL DEFAULT 'TH',
+            schedule_time TIME NOT NULL,
+            schedule_days VARCHAR(20) NOT NULL DEFAULT 'daily',
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            last_fired_date DATE DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_active (is_active, schedule_time)
         ) CHARACTER SET utf8mb4
     ''')
 

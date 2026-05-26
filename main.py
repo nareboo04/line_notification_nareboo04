@@ -2,7 +2,11 @@ import time
 import datetime
 from app import database as db
 from app.config import ALERT_CHECK_INTERVAL, DAILY_REPORT_HOUR
-from app.services.alert_checker import run as check_alerts, send_daily_gold_report
+from app.services.alert_checker import (
+    check_price_alerts,
+    check_scheduled_alerts,
+    send_daily_gold_report,
+)
 
 
 def get_all_user_ids() -> list[str]:
@@ -18,28 +22,40 @@ def get_all_user_ids() -> list[str]:
 def main():
     print("[main] initializing database...")
     db.init_db()
-    print(f"[main] alert check every {ALERT_CHECK_INTERVAL}s | daily report at {DAILY_REPORT_HOUR}:00")
+    print(f"[main] schedule check: every 60s | price check: every {ALERT_CHECK_INTERVAL}s | daily report: {DAILY_REPORT_HOUR}:00")
 
+    last_price_check  = 0.0
     last_daily_date: datetime.date | None = None
 
     while True:
         now = datetime.datetime.now()
 
-        # Daily gold report
-        if now.hour == DAILY_REPORT_HOUR and now.minute < (ALERT_CHECK_INTERVAL // 60 + 1):
+        # ── Schedule alerts: check every minute ──────────────────────────────
+        try:
+            check_scheduled_alerts()
+        except Exception as e:
+            print(f"[main] schedule check error: {e}")
+
+        # ── Price alerts: check every ALERT_CHECK_INTERVAL ───────────────────
+        if time.monotonic() - last_price_check >= ALERT_CHECK_INTERVAL:
+            try:
+                print(f"[main] checking price alerts at {now.strftime('%H:%M:%S')}")
+                check_price_alerts()
+            except Exception as e:
+                print(f"[main] price check error: {e}")
+            last_price_check = time.monotonic()
+
+        # ── Daily gold report ────────────────────────────────────────────────
+        if now.hour == DAILY_REPORT_HOUR and now.minute == 0:
             if last_daily_date != now.date():
                 print("[main] sending daily gold report")
-                send_daily_gold_report(get_all_user_ids())
+                try:
+                    send_daily_gold_report(get_all_user_ids())
+                except Exception as e:
+                    print(f"[main] daily report error: {e}")
                 last_daily_date = now.date()
 
-        # Alert check
-        try:
-            print(f"[main] checking alerts at {now.strftime('%H:%M:%S')}")
-            check_alerts()
-        except Exception as e:
-            print(f"[main] alert check error: {e}")
-
-        time.sleep(ALERT_CHECK_INTERVAL)
+        time.sleep(60)
 
 
 if __name__ == "__main__":
