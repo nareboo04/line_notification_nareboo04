@@ -8,13 +8,11 @@ services:
     restart: always
     ports:
       - "5000:5000"
+    env_file:
+      - .env
     environment:
       - TZ=Asia/Bangkok
       - MYSQL_HOST=mysql
-      - MYSQL_PORT=3306
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=password
-      - MYSQL_DATABASE=users_db
     depends_on:
       - mysql
 
@@ -23,13 +21,11 @@ services:
       context: .
       dockerfile: Dockerfile.main
     restart: always
+    env_file:
+      - .env
     environment:
       - TZ=Asia/Bangkok
       - MYSQL_HOST=mysql
-      - MYSQL_PORT=3306
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=password
-      - MYSQL_DATABASE=users_db
     depends_on:
       - mysql
 
