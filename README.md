@@ -5,9 +5,11 @@
 ## Features
 
 - ดูราคาทองคำ หุ้น SET / US และคริปโตแบบ Real-time
-- ตั้งแจ้งเตือนเมื่อราคาถึงเป้าหมาย (สูงกว่า / ต่ำกว่า)
+- ตั้งแจ้งเตือนเมื่อราคาถึงเป้าหมาย (สูงกว่า / ต่ำกว่า) — ตรวจทุก 5 นาที
 - ตั้งแจ้งเตือนตามเวลา (ทุกวัน / วันธรรมดา / วันหยุด)
-- ส่งรายงานราคาทองประจำวัน
+- ส่งรายงานราคาทองประจำวันอัตโนมัติ
+- Rich Menu — เมนูถาวรด้านล่างแชท กดได้เลยไม่ต้องพิมพ์
+- ตรวจสอบ LINE Signature ทุก request (ป้องกัน request ปลอม)
 - ควบคุมทุกอย่างผ่านแชท LINE
 
 ## Getting Started
@@ -20,14 +22,17 @@ cp .env.example .env
 
 แก้ค่าใน `.env`:
 
-| ตัวแปร | คำอธิบาย |
-|--------|-----------|
-| `LINE_TOKEN` | Channel Access Token จาก LINE Developers Console |
-| `MYSQL_ROOT_PASSWORD` | รหัสผ่าน MySQL (ตั้งให้แข็งแรง) |
-| `MYSQL_DATABASE` | ชื่อฐานข้อมูล (default: `users_db`) |
-| `ALERT_CHECK_INTERVAL` | ตรวจราคาทุกกี่วินาที (default: `300`) |
-| `DAILY_REPORT_HOUR` | ส่งรายงานทองกี่โมง 24h Bangkok (default: `18`) |
-| `API_PORT` | Port สำหรับ webhook (default: `5000`) |
+| ตัวแปร | คำอธิบาย | หาได้จาก |
+|--------|-----------|----------|
+| `LINE_TOKEN` | Channel Access Token | LINE Developers → Messaging API |
+| `LINE_CHANNEL_SECRET` | Channel Secret | LINE Developers → Basic settings |
+| `MYSQL_ROOT_PASSWORD` | รหัสผ่าน MySQL (ตั้งให้แข็งแรง) | กำหนดเอง |
+| `MYSQL_DATABASE` | ชื่อฐานข้อมูล (default: `users_db`) | — |
+| `ALERT_CHECK_INTERVAL` | ตรวจราคาทุกกี่วินาที (default: `300`) | — |
+| `DAILY_REPORT_HOUR` | ส่งรายงานทองกี่โมง 24h Bangkok (default: `18`) | — |
+| `MAX_PRICE_ALERTS` | แจ้งเตือนราคาสูงสุดต่อ user (default: `10`) | — |
+| `MAX_SCHED_ALERTS` | แจ้งเตือนเวลาสูงสุดต่อ user (default: `10`) | — |
+| `API_PORT` | Port สำหรับ webhook (default: `5000`) | — |
 
 ### 2. ตั้งค่า LINE Webhook
 
@@ -47,58 +52,14 @@ docker compose up --build -d
 docker compose --profile dev up --build -d
 ```
 
-### 4. ดู logs
+### 4. ตั้ง Rich Menu (ครั้งเดียว)
 
 ```bash
-docker compose logs -f api     # webhook server
-docker compose logs -f main    # scheduler / alert checker
+pip install Pillow
+python setup_richmenu.py
 ```
 
-## Project Structure
-
-```
-Gold-Alert/
-├── app/
-│   ├── api.py          # FastAPI webhook server
-│   ├── main.py         # Scheduler loop
-│   ├── config.py       # Environment config
-│   ├── database.py     # MySQL connection
-│   ├── line/
-│   │   ├── commands.py     # Command parser
-│   │   └── messaging.py    # LINE message builders
-│   ├── scrapers/
-│   │   ├── gold.py         # ราคาทองคำ
-│   │   ├── stock.py        # หุ้น SET / US (yfinance)
-│   │   └── crypto.py       # คริปโต (CoinGecko)
-│   └── services/
-│       └── alert_checker.py  # Price & schedule alert logic
-├── Dockerfile
-├── docker-compose.yml
-├── database.sql
-└── .env.example
-```
-
-## คำสั่ง LINE
-
-| คำสั่ง | ตัวอย่าง |
-|--------|---------|
-| ดูราคา | `ราคา ทอง` / `ราคา หุ้น PTT` / `ราคา หุ้นเมกา AAPL` / `ราคา คริปโต BTC` |
-| แจ้งเตือนราคา | `แจ้งเตือน ทอง 45000` / `แจ้งเตือน หุ้นเมกา AAPL สูงกว่า 200` |
-| แจ้งเตือนเวลา | `แจ้งเตือนเวลา ทอง 09:00 วันธรรมดา` |
-| ดูรายการ | `ดูแจ้งเตือน` / `ดูแจ้งเตือนเวลา` |
-| ลบ | `ลบแจ้งเตือน 1` / `ลบแจ้งเตือนทั้งหมด` |
-| ช่วยเหลือ | `ช่วยเหลือ` / `help` / `เมนู` |
-
-## Rich Menu (เมนูถาวรด้านล่างแชท)
-
-ตั้งครั้งเดียว — เมนูจะแสดงตลอดในทุกแชท
-
-```bash
-pip install Pillow          # ติดตั้งครั้งเดียว (บน local ไม่ต้องใส่ Docker)
-python setup_richmenu.py    # สร้างและ upload เมนูขึ้น LINE
-```
-
-เมนูจะมี 6 ปุ่ม:
+เมนูจะขึ้นถาวรด้านล่างแชทสำหรับทุก user:
 
 ```
 ┌──────────┬──────────┬──────────┐
@@ -108,8 +69,54 @@ python setup_richmenu.py    # สร้างและ upload เมนูขึ
 └──────────┴──────────┴──────────┘
 ```
 
+### 5. ดู logs
+
+```bash
+docker compose logs -f api     # webhook server
+docker compose logs -f main    # scheduler / alert checker
+```
+
+## คำสั่ง LINE
+
+รองรับหลายคำพ้องความหมาย เช่น `ราคา` / `เช็คราคา` / `ดูราคา` / `เช็ค`
+
+| หมวด | ตัวอย่างคำสั่ง |
+|------|--------------|
+| **ดูราคา** | `ราคา ทอง` · `เช็ค หุ้น PTT` · `ราคา หุ้นเมกา AAPL` · `ราคา คริปโต BTC` |
+| **คำพ้อง สินทรัพย์** | ทอง: `โกลด์` `xau` · หุ้น US: `หุ้นเมกา` `เมกา` `nasdaq` · คริปโต: `คอยน์` `เหรียญ` |
+| **แจ้งเตือนราคา** | `แจ้งเตือน ทอง 45000` · `แจ้งเตือน ทอง สูงกว่า 46000` · `แจ้งเตือน หุ้นเมกา AAPL 200` |
+| **แจ้งเตือนเวลา** | `แจ้งเตือนเวลา ทอง 09:00` · `แจ้งเตือนเวลา หุ้น PTT 09:30 วันธรรมดา` |
+| **ดูรายการ** | `ดูแจ้งเตือน` (แสดงทั้งราคาและเวลาในคำสั่งเดียว) |
+| **ลบ** | `ลบแจ้งเตือน 1` · `ลบแจ้งเตือนเวลา 2` · `ลบแจ้งเตือนทั้งหมด` |
+| **ช่วยเหลือ** | `ช่วยเหลือ` · `help` · `เมนู` · `?` |
+
+## Project Structure
+
+```
+Gold-Alert/
+├── app/
+│   ├── api.py              # FastAPI webhook + LINE signature verification
+│   ├── main.py             # Scheduler loop
+│   ├── config.py           # Environment config
+│   ├── database.py         # MySQL connection (retry 10x)
+│   ├── line/
+│   │   ├── commands.py     # Command parser + keyword sets
+│   │   └── messaging.py    # LINE Flex Message builders
+│   ├── scrapers/
+│   │   ├── gold.py         # ราคาทองคำ (scrape)
+│   │   ├── stock.py        # หุ้น SET / US (yfinance)
+│   │   └── crypto.py       # คริปโต (CoinGecko free API)
+│   └── services/
+│       └── alert_checker.py  # Price & schedule alert logic
+├── setup_richmenu.py       # One-time Rich Menu setup script
+├── Dockerfile
+├── docker-compose.yml
+├── database.sql
+└── .env.example
+```
+
 ## Data Sources
 
-- ทองคำ: [ราคาทอง.com](https://ทองคำราคา.com/)
-- หุ้น: [yfinance](https://github.com/ranaroussi/yfinance) (SET / NYSE / NASDAQ)
-- คริปโต: [CoinGecko API](https://www.coingecko.com/) (ไม่ต้องใช้ API key)
+- ทองคำ: scrape จาก [ราคาทอง.com](https://ทองคำราคา.com/)
+- หุ้น: [yfinance](https://github.com/ranaroussi/yfinance) (SET `.BK` / NYSE / NASDAQ)
+- คริปโต: [CoinGecko API](https://www.coingecko.com/) — ฟรี ไม่ต้อง API key

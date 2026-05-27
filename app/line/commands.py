@@ -35,6 +35,7 @@ from app import database as db
 from app.line import messaging as msg
 from app.scrapers import gold, stock, crypto
 from app.scrapers.crypto import SUPPORTED as CRYPTO_SUPPORTED
+from app.config import MAX_PRICE_ALERTS, MAX_SCHED_ALERTS
 
 
 # ── Keyword sets ────────────────────────────────────────────────────────────────
@@ -248,6 +249,17 @@ def _save_price_alert(user_id: str, reply_token: str, asset_type: str,
     conn = db.get_conn()
     cursor = conn.cursor()
     cursor.execute(
+        "SELECT COUNT(*) FROM alerts WHERE user_id = %s AND is_active = 1", (user_id,)
+    )
+    if cursor.fetchone()[0] >= MAX_PRICE_ALERTS:
+        cursor.close()
+        conn.close()
+        msg.reply(reply_token, [msg.text_msg(
+            f"⚠️ ตั้งแจ้งเตือนราคาได้สูงสุด {MAX_PRICE_ALERTS} รายการ\n"
+            "ลบอันเก่าก่อนด้วย 'ลบแจ้งเตือน [หมายเลข]'"
+        )])
+        return
+    cursor.execute(
         "INSERT INTO alerts (user_id, asset_type, asset_symbol, asset_market, target_price, condition_type) "
         "VALUES (%s, %s, %s, %s, %s, %s)",
         (user_id, asset_type, symbol, market, target, condition),
@@ -447,6 +459,17 @@ def _save_schedule(user_id: str, reply_token: str, asset_type: str,
 
     conn = db.get_conn()
     cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) FROM scheduled_alerts WHERE user_id = %s AND is_active = 1", (user_id,)
+    )
+    if cursor.fetchone()[0] >= MAX_SCHED_ALERTS:
+        cursor.close()
+        conn.close()
+        msg.reply(reply_token, [msg.text_msg(
+            f"⚠️ ตั้งแจ้งเตือนเวลาได้สูงสุด {MAX_SCHED_ALERTS} รายการ\n"
+            "ลบอันเก่าก่อนด้วย 'ลบแจ้งเตือนเวลา [หมายเลข]'"
+        )])
+        return
     cursor.execute(
         "INSERT INTO scheduled_alerts "
         "(user_id, asset_type, asset_symbol, asset_market, schedule_time, schedule_days) "

@@ -3,7 +3,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-LINE_TOKEN: str = os.getenv('LINE_TOKEN', os.getenv('AUTHORIZATION', ''))
+LINE_TOKEN:          str = os.getenv('LINE_TOKEN', os.getenv('AUTHORIZATION', ''))
+LINE_CHANNEL_SECRET: str = os.getenv('LINE_CHANNEL_SECRET', '')
+
+MAX_PRICE_ALERTS: int = int(os.getenv('MAX_PRICE_ALERTS', 10))
+MAX_SCHED_ALERTS: int = int(os.getenv('MAX_SCHED_ALERTS', 10))
 
 DB_CONFIG: dict = {
     'host': os.getenv('MYSQL_HOST', 'localhost'),
